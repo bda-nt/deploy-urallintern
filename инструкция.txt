@@ -17,14 +17,16 @@ ALLOWED_HOSTS=158.160.52.159 *
 1. cd kaban
 chmod a+x ./vendor/bin/sail
 chmod a+x /home/login/project/ural/docker/kaban/vendor/laravel/sail/bin/sail
+sudo chmod -R 777 ./storage
+Менять в docker-compose.yml у front-gant в урл адресе на новый белый ip
 2. sudo ./vendor/bin/sail up -d 
 
 3. sudo ./vendor/bin/sail php artisan migrate --seed
 4. sudo docker exec -it <контейнер оценки> bash
 5. python manage.py migrate
 6. python manage.py makemigrations
-python manage.py createsuperuser - не знаю зачем эта команда
-suduo docker ps
+python manage.py createsuperuser
+suduo docker ps -a
 sudo docker images
 sudo docker stop $(sudo docker ps -a)
 sudo docker rm $(sudo docker ps -a)

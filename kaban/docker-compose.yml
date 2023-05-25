@@ -20,7 +20,7 @@ services:
         ports:
             - "81:80"
         networks:
-            - apps
+            - sail
         depends_on:
             - gant
             
