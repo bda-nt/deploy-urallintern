@@ -1,0 +1,41 @@
+ssh login@158.160.52.159
+sudo apt update
+sudo apt install docker docker.io
+sudo apt install docker-compose
+sudo systemctl enable docker
+sudo systemctl start docker
+
+sudo apt-get install unzip
+unzip docker.zip -d ural
+cd ural
+cd docker
+
+добавить внутренний ip адрес в .env файлы у gant и ocenka 
+DJANGO_ALLOWED_HOSTS=158.160.52.159 *
+ALLOWED_HOSTS=158.160.52.159 *
+
+1. cd kaban
+chmod a+x ./vendor/bin/sail
+chmod a+x /home/login/project/ural/docker/kaban/vendor/laravel/sail/bin/sail
+2. sudo ./vendor/bin/sail up -d 
+
+3. sudo ./vendor/bin/sail php artisan migrate --seed
+4. sudo docker exec -it <контейнер оценки> bash
+5. python manage.py migrate
+6. python manage.py makemigrations
+python manage.py createsuperuser - не знаю зачем эта команда
+suduo docker ps
+sudo docker images
+sudo docker stop $(sudo docker ps -a)
+sudo docker rm $(sudo docker ps -a)
+sudo docker rmi $(sudo docker images)
+df -h
+free -mh
+docker attach <контейнер>
+docker logs <контейнер>
+
+внешние порты:
+kanban - 3000
+ocenka - 5000
+gant - 8000
+mysql - 3306
