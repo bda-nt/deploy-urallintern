@@ -6,8 +6,12 @@ sudo systemctl enable docker
 sudo systemctl start docker
 
 sudo apt-get install unzip
-unzip docker.zip -d ural
 cd new/deploy-urallintern
+
+git clone https://github.com/bda-nt/deploy-urallintern
+git config --global credential.helper store
+
+unzip vendor.zip -d vendor
 
 добавить внутренний ip адрес в .env файлы у gant и ocenka 
 DJANGO_ALLOWED_HOSTS=158.160.52.159 *
