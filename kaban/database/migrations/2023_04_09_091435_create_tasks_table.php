@@ -23,7 +23,7 @@ return new class extends Migration
                 ->cascadeOnUpdate();
             $table->unsignedBigInteger('project_id');
             $table->unsignedBigInteger('team_id');
-            $table->string('name', 31);
+            $table->string('name', 63);
             $table->boolean('is_on_kanban');
             $table->boolean('is_completed');
             $table->unsignedInteger('status_id');
