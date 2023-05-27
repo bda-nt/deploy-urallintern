@@ -7,14 +7,14 @@ sudo systemctl start docker
 
 sudo apt-get install unzip
 unzip docker.zip -d ural
-cd ural
-cd docker
+cd new/deploy-urallintern
 
 добавить внутренний ip адрес в .env файлы у gant и ocenka 
 DJANGO_ALLOWED_HOSTS=158.160.52.159 *
 ALLOWED_HOSTS=158.160.52.159 *
 
 1. cd kaban
+перекинуть папку vendor
 chmod a+x ./vendor/bin/sail
 chmod a+x /home/login/project/ural/docker/kaban/vendor/laravel/sail/bin/sail
 sudo chmod -R 777 ./storage
