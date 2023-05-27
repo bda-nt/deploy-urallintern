@@ -16,7 +16,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import {onKanbanViewChange} from './onKanban';
 
 window.onKanbanViewChange = onKanbanViewChange;
-let taskId = null;
+let taskId = null; 
 
 export default class Gantt extends Component {
     constructor(props) {
@@ -169,7 +169,7 @@ export default class Gantt extends Component {
             {
                 name: "text", label: "ЗАДАЧИ", width: "*", tree: true, grid: true,
                 template: function (task) {
-                    if (task.end_date < new Date()) {
+                    if (task.is_completed === true) {
                         return "<span class='completed_text'>" + task.text + "</span>";
                     } else {
                         return task.text;
@@ -374,13 +374,13 @@ export default class Gantt extends Component {
 
         gantt.templates.task_class = function (start, end, task) {
             if (task.$level === 0 || task.$level === 1) {
-                if (new Date() > end) {
+                if (task.is_completed === true) {
                     return "parent-task-complete";
                 } else {
                     return "parent-task";
                 }
             } else {
-                if (new Date() > end) {
+                if (task.is_completed === true) {
                     return "child-task-complete";
                 } else {
                     return "child-task";
@@ -655,7 +655,7 @@ export default class Gantt extends Component {
         }
 
         function remove() {
-            let task = gantt.getTask(taskId);
+            let task = gantt.getTask(taskId)
             axios.delete(`http://127.0.0.1:8000/api/v1/gant/task/${task.id}/del`)
                 .then(response => {
                     console.log(response.data);
