@@ -23,6 +23,7 @@ services:
             - sail
         depends_on:
             - gant
+        restart: always
             
     ocenka:
         build: ./../ocenka/Uralintern_2022
@@ -60,6 +61,7 @@ services:
             - sail
         depends_on:
             - mysql
+        restart: always
             
     mysql:
         image: 'mysql/mysql-server:8.0'
@@ -86,6 +88,7 @@ services:
                 - '-p${DB_KABAN_PASSWORD}'
             retries: 3
             timeout: 5s
+        restart: always
          
 networks:
     sail:
