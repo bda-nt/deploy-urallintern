@@ -16,7 +16,7 @@ services:
         build:
             context: ./../gant/GantFrontend
             args:
-                REACT_APP_API_URL: http://158.160.96.200:88
+                REACT_APP_API_URL: http://84.201.172.206:88
         ports:
             - "88:80"
         networks:
