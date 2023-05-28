@@ -33,7 +33,7 @@ class Task(models.Model):
     is_completed = models.BooleanField(verbose_name='Готовность задачи', default=False)
     status_id = models.ForeignKey(Status, on_delete=models.PROTECT, db_column='status_id', to_field='id')
     planned_start_date = models.DateField(verbose_name='Время начала задачи')
-    planned_finish_date = models.DateField(verbose_name='Время окончания задачи')
+    planned_final_date = models.DateField(verbose_name='Время окончания задачи')
     deadline = models.DateField(verbose_name='Жесткий дедлайн')
     completed_at = models.DateField(verbose_name='Время завершения', null=True, blank=True)
     created_at = models.DateTimeField(verbose_name='Время создания', auto_now_add=True)
