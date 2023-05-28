@@ -16,7 +16,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import {onKanbanViewChange} from './onKanban';
 
 window.onKanbanViewChange = onKanbanViewChange;
-let taskId = null; 
+let taskId = null;
 
 export default class Gantt extends Component {
     constructor(props) {
