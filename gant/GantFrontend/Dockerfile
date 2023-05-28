@@ -12,7 +12,7 @@ RUN yarn run build
 
 # Stage 2
 FROM nginx:1.23.0-alpine
-COPY ./build /usr/share/nginx/html
+COPY --from=build-stage /GantFrontend/build /usr/share/nginx/html
 RUN rm /etc/nginx/conf.d/default.conf
 
 COPY nginx/default.conf /etc/nginx/conf.d
