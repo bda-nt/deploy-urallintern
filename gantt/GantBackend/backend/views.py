@@ -16,7 +16,7 @@ def get_all_tasks(request):
     project_filter = int(request.data.get('project_id', 1))
     tasks = Task.objects.filter(project_id=project_filter).values('id', 'parent_id', 'name', 'description',
                                                                   'is_on_kanban', 'is_completed', 'planned_start_date',
-                                                                  'planned_finish_date', 'deadline')
+                                                                  'planned_final_date', 'deadline')
     tasks = get_tasks(tasks, None, [])
     return Response(tasks)
 
@@ -59,7 +59,7 @@ def edit_dates(request: Request, id):
     parent = task.parent_id
 
     task.planned_start_date = start_date
-    task.planned_finish_date = finish_date
+    task.planned_final_date = finish_date
     task.deadline = deadline
     if is_in_parent_terms(parent, task):
         task.save()
@@ -95,7 +95,7 @@ def create_task(request: Request):
         team_id=task_data['team_id'],
         name=task_data['name'],
         description=task_data.get('description', None),
-        status_id=Status.objects.get_or_create(name='Запланирована')[0],
+        status_id=Status.objects.get_or_create(name='В работу')[0],
         planned_start_date=start_date,
         planned_final_date=finish_date,
         deadline=deadline
