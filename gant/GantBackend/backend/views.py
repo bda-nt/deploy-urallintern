@@ -2,12 +2,14 @@ from django.forms import model_to_dict
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
+from django.views.decorators.csrf import csrf_exempt
 from .models import *
 from .utils import is_valid_date_term, DATE_FORMAT, \
     is_in_parent_terms, get_tasks
 from datetime import datetime
 
 
+@csrf_exempt
 @api_view(['GET'])
 def get_all_tasks(request):
     """Возвращает задачи во вложенном виде, с полями, необходимыми для диаграммы Ганта.
@@ -21,6 +23,7 @@ def get_all_tasks(request):
     return Response(tasks)
 
 
+@csrf_exempt
 @api_view(['GET'])
 def get_task_by_id(request, id):
     """
@@ -34,6 +37,7 @@ def get_task_by_id(request, id):
     return Response(task)
 
 
+@csrf_exempt
 @api_view(['POST'])
 def edit_dates(request: Request, id):
     """
@@ -67,6 +71,7 @@ def edit_dates(request: Request, id):
     return Response({"msg": "Enter the correct data."}, status=404)
 
 
+@csrf_exempt
 @api_view(['POST'])
 def create_task(request: Request):
     """Создать задачу:
@@ -114,6 +119,7 @@ def create_task(request: Request):
     return Response({"msg": "Enter the correct data."}, status=404)
 
 
+@csrf_exempt
 @api_view(['POST'])
 def change_kanban_view(request: Request, id: int):
     try:
@@ -131,6 +137,7 @@ def change_kanban_view(request: Request, id: int):
     return Response({'task': {'id': id, 'is_on_kanban': task.is_on_kanban}})
 
 
+@csrf_exempt
 @api_view(['DELETE'])
 def delete_task(request: Request, id: int):
     """Удалить задачу"""
@@ -143,6 +150,7 @@ def delete_task(request: Request, id: int):
     return Response(context)
 
 
+@csrf_exempt
 @api_view(['POST'])
 def edit_task(request: Request, id: int):
     """{"task":
