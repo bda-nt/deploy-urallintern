@@ -1,20 +1,20 @@
 version: '3'
 services:
     gant:
-        build: ./../gant/GantBackend
+        build: ../gantt/GantBackend
         command: python manage.py runserver 0.0.0.0:8000
         ports:
             - '8000:8000'
-        env_file: ./../gant/.env
+        env_file: ../gantt/.env
         networks:
             - sail
         depends_on:
             - mysql
         restart: always
-        
+
     front-gant:
         build:
-            context: ./../gant/GantFrontend
+            context: ../gantt/GantFrontend
             args:
                 REACT_APP_API_URL: http://localhost:81
         ports:
@@ -23,7 +23,7 @@ services:
             - sail
         depends_on:
             - gant
-            
+
     ocenka:
         build: ./../ocenka/Uralintern_2022
         command: python manage.py runserver 0.0.0.0:8000
@@ -60,7 +60,7 @@ services:
             - sail
         depends_on:
             - mysql
-            
+
     mysql:
         image: 'mysql/mysql-server:8.0'
         ports:
@@ -86,7 +86,7 @@ services:
                 - '-p${DB_KABAN_PASSWORD}'
             retries: 3
             timeout: 5s
-         
+
 networks:
     sail:
         driver: bridge
