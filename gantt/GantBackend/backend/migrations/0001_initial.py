@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
                 ('is_on_kanban', models.BooleanField(default=True, verbose_name='Отображение на канбане')),
                 ('is_completed', models.BooleanField(default=False, verbose_name='Готовность задачи')),
                 ('planned_start_date', models.DateField(verbose_name='Время начала задачи')),
-                ('planned_finish_date', models.DateField(verbose_name='Время окончания задачи')),
+                ('planned_final_date', models.DateField(verbose_name='Время окончания задачи')),
                 ('deadline', models.DateField(verbose_name='Жесткий дедлайн')),
                 ('completed_at', models.DateField(blank=True, null=True, verbose_name='Время завершения')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Время создания')),
