@@ -16,7 +16,7 @@ services:
         build:
             context: ./../gant/GantFrontend
             args:
-                REACT_APP_API_URL: http://84.201.172.206:88
+                REACT_APP_API_URL: http://158.160.62.250:88
         ports:
             - "88:80"
         networks:
@@ -24,20 +24,7 @@ services:
         depends_on:
             - gant
         restart: unless-stopped
-            
-    ocenka:
-        build: ./../ocenka/Uralintern_2022
-        command: python manage.py runserver 0.0.0.0:8000
-        ports:
-            - '5000:8000'
-        env_file:
-            - ./../ocenka/.env.dev
-        networks:
-            - sail
-        depends_on:
-            - mysql
-        restart: unless-stopped
-
+        
     laravel.test:
         build:
             context: ./docker/8.2
@@ -62,7 +49,31 @@ services:
         depends_on:
             - mysql
         restart: unless-stopped
-            
+        
+    front-kanban:
+        build:
+            context: ./front-kanban
+        ports:
+            - "83:80"
+        networks:
+            - sail
+        depends_on:
+            - laravel.test
+        restart: unless-stopped
+ 
+    ocenka:
+        build: ./../ocenka/Uralintern_2022
+        command: python manage.py runserver 0.0.0.0:8000
+        ports:
+            - '5000:8000'
+        env_file:
+            - ./../ocenka/.env.dev
+        networks:
+            - sail
+        depends_on:
+            - mysql
+        restart: unless-stopped
+
     mysql:
         image: 'mysql/mysql-server:8.0'
         ports:

@@ -75,7 +75,7 @@ class TaskController extends Controller
             'parent_id' => $request->parent_id,
             'project_id' => $request->project_id,
             'team_id' => $request->team_id,
-            'name' => $request->name,
+            'name' => $request->task_name,
             'is_on_kanban' => false,
             'is_completed' => false,
             'status_id' => 1, // В работу
