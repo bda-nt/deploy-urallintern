@@ -15,7 +15,7 @@ def get_all_tasks(request):
     В BODY запроса указывается поле {'project_id': <ID-проекта>}
     """
     project_filter = int(request.data.get('project_id', 1))
-    tasks = Task.objects.filter(project_id=project_filter).values('id', 'parent_id', 'name', 'description',
+    tasks = Task.objects.all().values('id', 'parent_id', 'name', 'description',
                                                                   'is_on_kanban', 'is_completed', 'planned_start_date',
                                                                   'planned_final_date', 'deadline')
     tasks = get_tasks(tasks, None, [])
