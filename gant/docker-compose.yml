@@ -1,6 +1,6 @@
 version: '3'
 services:
-    backend:
+    gant:
         restart: always
         build: ./GantBackend
         command: python manage.py runserver 0.0.0.0:8000
@@ -23,7 +23,7 @@ services:
         networks:
             - apps
         depends_on:
-            - backend
+            - gant
     mysql:
         image: 'mysql/mysql-server:8.0'
         ports:
