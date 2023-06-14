@@ -43,9 +43,9 @@ class Task(models.Model):
         self.name = kwargs.get('name', self.name)
         self.description = kwargs.get('description', self.description)
         self.planned_start_date = kwargs.get('planned_start_date', self.planned_start_date)
-        self.planned_finish_date = kwargs.get('planned_finish_date', self.planned_finish_date)
+        self.planned_final_date = kwargs.get('planned_final_date', self.planned_final_date)
         self.deadline = kwargs.get('deadline', self.deadline)
-        self.save()
+        self.save(using='default')
 
     class Meta:
         db_table = 'tasks'
@@ -56,7 +56,7 @@ class Executor(models.Model):
     task_id = models.ForeignKey(Task, on_delete=models.CASCADE, db_column='task_id', to_field='id')
     user_id = models.IntegerField()
     role_id = models.ForeignKey(Role, on_delete=models.CASCADE, db_column='role_id', to_field='id')
-    time_spent = models.TimeField(verbose_name='Время выполнения задачи')
+    time_spent = models.TimeField(verbose_name='Время выполнения задачи', null=True, blank=True)
     created_at = models.DateTimeField(verbose_name='Время создания', auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name='Время обновления', auto_now=True)
 
@@ -86,3 +86,60 @@ class Comment(models.Model):
 
     class Meta:
         db_table = 'comments'
+
+
+class UralapiEventuts(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    title = models.CharField(max_length=100)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'uralapi_eventuts'
+        managed = False
+
+
+class UralapiProject(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    title = models.CharField(max_length=100)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+    id_director = models.ForeignKey('UralapiUser', models.DO_NOTHING)
+    id_event = models.ForeignKey(UralapiEventuts, models.DO_NOTHING)
+
+    class Meta:
+        db_table = 'uralapi_project'
+        managed = False
+
+
+class UralapiTeam(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    title = models.CharField(max_length=200)
+    team_chat = models.CharField(max_length=200, blank=True, null=True)
+    teg = models.CharField(unique=True, max_length=200)
+    id_project = models.ForeignKey(UralapiProject, models.DO_NOTHING)
+    id_tutor = models.ForeignKey('UralapiUser', models.DO_NOTHING)
+
+    class Meta:
+        db_table = 'uralapi_team'
+        managed = False
+
+
+class UralapiUser(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    password = models.CharField(max_length=128)
+    last_login = models.DateTimeField(blank=True, null=True)
+    is_superuser = models.IntegerField()
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150)
+    is_staff = models.IntegerField()
+    is_active = models.IntegerField()
+    date_joined = models.DateTimeField()
+    username = models.CharField(max_length=100, blank=True, null=True)
+    email = models.CharField(unique=True, max_length=254)
+    patronymic = models.CharField(max_length=100, blank=True, null=True)
+    image = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        db_table = 'uralapi_user'
+        managed = False

@@ -1,4 +1,4 @@
-import React, {Component, useEffect} from 'react';
+import React, {Component} from 'react';
 import axios from 'axios';
 import './Gantt.css'
 import {gantt} from 'dhtmlx-gantt';
@@ -10,6 +10,7 @@ import {ReactComponent as Stop} from "../../Assets/img/stop.svg"
 import {ReactComponent as TrashWhite} from "../../Assets/img/trashWhite.svg"
 import {ReactComponent as Add} from "../../Assets/img/addButton.svg"
 import {ReactComponent as Del} from "../../Assets/img/deleteButton.svg"
+import deleteButton from "../../Assets/img/deleteButton.svg";
 import {ReactComponent as Clock} from "../../Assets/img/clock.svg"
 import {toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -17,24 +18,29 @@ import {onKanbanViewChange} from './onKanban';
 
 window.onKanbanViewChange = onKanbanViewChange;
 let taskId = null;
-const url = process.env.REACT_APP_API_URL;
+
 export default class Gantt extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            data: ["Игорь", "Саша", "Вера", "Юля", "Артем"],
-            items: ["Пункт 1", "Пункт 2", "Пункт 3", "Пункт 4", "Пункт 5", "Пункт 6"],
-            options: [
-                { id: 1, name: 'Название проекта' },
-                { id: 21, name: 'ЛК оценка' },
-                { id: 22, name: 'ЛК Гант' },
-                { id: 23, name: 'ЛК Канбан' }
-            ],
+            stagesID: [],
             isRunning: false,
             elapsedTime: 0,
             comments: [],
             currentComment: '',
-            selectedOptionId: null
+            selectedProjectId: null,
+            selectedProjectIdFilter: 1,
+            currentEvent: 1,
+            selectedTeamId: null,
+            usersLocal: [
+                {id: 1, first_name: 'Игорь'},
+                {id: 2, first_name: 'Олег'},
+                {id: 3, first_name: 'Ольга'},
+            ],
+            users: [],
+            projects: [],
+            teams: [],
+            divs: []
         };
         this.handleAdd = this.handleAdd.bind(this);
         this.handleDelete = this.handleDelete.bind(this);
@@ -42,12 +48,6 @@ export default class Gantt extends Component {
         this.handlePlayClick = this.handlePlayClick.bind(this);
         this.handleSaveClick = this.handleSaveClick.bind(this);
         this.handleRemoveClick = this.handleRemoveClick.bind(this);
-        this.handleOptionChange = this.handleOptionChange.bind(this);
-    }
-
-    handleOptionChange(event) {
-        const selectedOptionId = event.target.value;
-        this.setState({ selectedOptionId });
     }
 
     handleChange = (event) => {
@@ -68,29 +68,29 @@ export default class Gantt extends Component {
         }
     };
     addItem = () => {
-        const newItems = [...this.state.items, ""];
-        this.setState({items: newItems});
+        const newItems = [...this.state.stagesID, ""];
+        this.setState({stagesID: newItems});
     };
     removeItem = (index) => {
-        const newItems = [...this.state.items];
+        const newItems = [...this.state.stagesID];
         newItems.splice(index, 1);
-        this.setState({items: newItems});
+        this.setState({stagesID: newItems});
     };
     handleItemChange = (event, index) => {
-        const newItems = [...this.state.items];
+        const newItems = [...this.state.stagesID];
         newItems[index] = event.target.value;
-        this.setState({items: newItems});
+        this.setState({stagesID: newItems});
     }
 
     handleAdd() {
-        const newData = [...this.state.data, "Новый исполнитель"];
-        this.setState({data: newData});
+        const newData = [...this.state.divs, this.state.divs];
+        this.setState({divs: newData});
     }
 
     handleDelete(index) {
-        const newData = [...this.state.data];
+        const newData = [...this.state.divs];
         newData.splice(index, 1);
-        this.setState({data: newData});
+        this.setState({divs: newData});
     }
 
     componentWillUnmount() {
@@ -138,10 +138,39 @@ export default class Gantt extends Component {
 
     componentDidMount() {
         gantt.config.date_format = "%Y-%m-%d";
-        gantt.init(this.ganttContainer);
+        gantt.config.container_resize_method = "timeout";
+        gantt.config.show_tasks_outside_timescale = true;
+
+        // Подзадачи
+        gantt.templates.grid_indent = function(item) {
+            return "<div class='gantt_tree_indent' style='width:" + (item.$level * 4) + "px;'></div>";
+        };
+
+
+        gantt.templates.parse_date = function (date) {
+            return new Date(date);
+        };
+        gantt.templates.format_date = function (date) {
+            let formatFunc = gantt.date.date_to_str(gantt.config.date_format);
+            return formatFunc(date);
+        };
+
+        // Календарь
+        gantt.config.scale_height = 80;
+        gantt.config.show_tasks_outside_timescale = true;
+        gantt.config.start_date = new Date(2023, 1, 1);
+        gantt.config.end_date = new Date(2024, 1, 1);
+        gantt.config.fit_tasks = true;
+        gantt.config.scales = [
+            {unit: "month", step: 1, format: "%F, %Y"},
+            {unit: "day", step: 1, format: "%j"}
+        ];
+
+        gantt.config.show_progress = false;
+        gantt.config.show_links = false;
         gantt.i18n.setLocale("ru"); // Руссификация
-        gantt.config.links = false;
         gantt.config.show_errors = false; // отключаем баннер ошибок
+        gantt.init(this.ganttContainer)
 
         //scroll
         gantt.config.scrollable = true;
@@ -153,7 +182,7 @@ export default class Gantt extends Component {
                 {
                     width: 430,
                     min_width: 300,
-                    rows:[
+                    rows: [
                         {view: "grid", scrollX: "gridScroll", scrollable: true, scrollY: "scrollVer"},
                         {view: "scrollbar", id: "gridScroll"}
                     ]
@@ -161,7 +190,7 @@ export default class Gantt extends Component {
                 {resizer: true, width: 1},
                 {
                     min_width: 1000,
-                    rows:[
+                    rows: [
                         {view: "timeline", scrollX: "scrollHor", scrollY: "scrollVer"},
                         {view: "scrollbar", id: "scrollHor"}
                     ]
@@ -169,14 +198,6 @@ export default class Gantt extends Component {
                 {view: "scrollbar", id: "scrollVer"}
             ],
         };
-
-        // Календарь
-        gantt.config.scale_height = 80;
-        gantt.config.show_tasks_outside_timescale = true;
-        gantt.config.scales = [
-            {unit: "month", step: 1, format: "%F, %Y"},
-            {unit: "day", step: 1, format: "%j"}
-        ];
 
         // Dropdown
         gantt.templates.grid_open = function (item) {
@@ -239,9 +260,11 @@ export default class Gantt extends Component {
             return document.getElementById(formName);
         }
 
+        // get ID
         gantt.showLightbox = function (id) {
             taskId = id;
-            let task = gantt.getTask(id);
+            let task = gantt.getTask(id)
+            let taskUrl = "http://127.0.0.1:8000/api/v1/gant/task/" + taskId;
 
             let form;
             let $new = task.$new;
@@ -254,24 +277,20 @@ export default class Gantt extends Component {
             }
 
             if ($new) {
-                // Show the create task form
                 form = getForm("create_task");
 
-                // вывод данных
+                // Display task data in form
                 let text = form.querySelector("[name='text']");
                 let description = form.querySelector("[name='description']");
                 let deadline = form.querySelector("[name='deadline']");
                 let startDate = form.querySelector("[name='start_date']");
                 let endDate = form.querySelector("[name='end_date']");
+                let projectId = form.querySelector("[id='project-op']");
+                let teamId = form.querySelector("[id='team-op']");
+                let responsible = form.querySelector("[id='responsible-op']");
 
                 form.querySelector("[id='parent_task']").value = task.parent || '';
                 form.querySelector("#parent_task").innerHTML = parentTask;
-
-                description.focus();
-                text.focus();
-                deadline.focus();
-                startDate.focus();
-                endDate.focus();
 
                 if (task.$new && task.parent) {
                     let parentTask = gantt.getTask(task.parent);
@@ -280,103 +299,182 @@ export default class Gantt extends Component {
                     deadline.value = parentTask.deadline ? new Date(parentTask.deadline).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
                     startDate.value = parentTask.start_date ? new Date(parentTask.start_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
                     endDate.value = parentTask.end_date ? new Date(parentTask.end_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                    projectId.value = task.project_id
+                    teamId.value = task.team_id
+                    responsible.value = task.executor_id
                 } else {
                     description.value = task.description || "";
                     text.value = task.text || "";
                     deadline.value = task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
                     startDate.value = task.start_date ? new Date(task.start_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
                     endDate.value = task.end_date ? new Date(task.end_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                    projectId.value = task.project_id
+                    teamId.value = task.team_id
+                    responsible.value = task.executor_id
                 }
 
                 if (task.$new && !task.parent) {
-                    // Добавляем стартовые значения для дедлайна, начальной и конечной дат
                     text.value = "";
                     deadline.value = "";
                     startDate.value = "";
                     endDate.value = "";
+                    projectId.value = task.project_id
+                    teamId.value = task.team_id
+                    responsible.value = task.executor_id
                 }
+
+                let stagesInputs = form.querySelectorAll('.check_list_text');
+                let stagesArr = Array.from(stagesInputs).map(input => ({description: input.value}));
+                task.stages = stagesArr;
 
                 form.style.display = "flex";
 
                 form.querySelector('button[type="closemodal"]').onclick = cancel;
                 form.querySelector("[name='save']").onclick = save;
                 form.querySelector("[name='close']").onclick = cancel;
-            } else {
-                // Show the task details form
-                form = getForm("display_task");
-                // вывод данных
-                let textView = form.querySelector("[name='text1']");
-                let descriptionView = form.querySelector("[name='description1']");
-                let deadlineView = form.querySelector("[name='deadline1']");
-                let startDateView = form.querySelector("[name='start_date1']");
-                let endDateView = form.querySelector("[name='end_date1']");
-
-                form.querySelector("[id='parent_task']").value = task.parent || '';
-                form.querySelector("#parent_task").innerHTML = parentTask;
-
-                descriptionView.focus();
-                textView.focus();
-                deadlineView.focus();
-                startDateView.focus();
-                endDateView.focus();
-
-
-                descriptionView.value = task.description || "";
-                textView.value = task.text || "";
-                deadlineView.value = task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                startDateView.value = task.start_date ? new Date(task.start_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                endDateView.value = task.end_date ? new Date(task.end_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-
-                form.style.display = "flex";
-
-                //name="create_task"
-                form.querySelector('.main_view_list').scrollTop = 0;
-                form.querySelector('button[type="closemodal1"]').onclick = cancel;
-                form.querySelector("[name='create_task']").onclick = function () {
-                    taskId = id;
-                    let displayForm = getForm("display_task");
-                    displayForm.style.display = "none";
-                    let parentTaskId = gantt.getSelectedId();
-                    gantt.createTask(this.createTask, parentTaskId);
-                }
-                form.querySelector("[name='edit']").onclick = function () {
-                    taskId = id;
-                    let editForm = getForm("edit_task");
-                    let displayForm = getForm("display_task");
-                    displayForm.style.display = "none";
-                    editForm.style.display = "flex";
-                    let task = gantt.getTask(id);
-                    editForm.querySelector('.main_view_list').scrollTop = 0;
-                    editForm.querySelector("[name='text_edit']").value = task.text || "";
-                    editForm.querySelector("[name='description_edit']").value = task.description || "";
-                    editForm.querySelector("[name='deadline_edit']").value = task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                    editForm.querySelector("[name='start_date_edit']").value = task.start_date ? new Date(task.start_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                    editForm.querySelector("[name='end_date_edit']").value = task.end_date ? new Date(task.end_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                    let parentTask = "";
-                    if (task.parent) {
-                        parentTask = "Базовая задача: <span style='text-decoration: underline;'>" + gantt.getTask(task.parent).text + "</span>";
-                    } else {
-                        parentTask = "Базовая задача: <span style='text-decoration: underline;'>Отсутствует</span>";
-                    }
-                    editForm.querySelector("[id='parent_task']").value = task.parent || '';
-                    editForm.querySelector("#parent_task").innerHTML = parentTask;
-                    editForm.querySelector("#parent_task").innerHTML = parentTask;
-                    editForm.querySelector('button[type="closemodal3"]').onclick = function () {
-                        gantt.hideLightbox();
-                        editForm.style.display = "none";
-                    };
-                    editForm.querySelector("[name='save_edit']").onclick = edit
-                    editForm.querySelector("[name='create_task_edit']").onclick = function () {
-                        taskId = id;
-                        let editForm = getForm("edit_task");
-                        editForm.style.display = "none";
-                        let parentTaskId = gantt.getSelectedId();
-                        gantt.createTask(this.createTask, parentTaskId);
-                    }
-                    editForm.querySelector("[name='delete_edit']").onclick = remove;
-                };
-                form.querySelector("[name='delete']").onclick = remove;
             }
+
+            axios.get(taskUrl)
+                .then(response => {
+                    let taskData = response.data;
+                    console.log(taskData)
+
+                    if (!$new) {
+                        // Show the task details form
+                        form = getForm("display_task");
+
+                        // вывод данных
+                        let textView = form.querySelector("[name='text1']");
+                        let descriptionView = form.querySelector("[name='description1']");
+                        let deadlineView = form.querySelector("[name='deadline1']");
+                        let startDateView = form.querySelector("[name='start_date1']");
+                        let endDateView = form.querySelector("[name='end_date1']");
+                        let projectId = form.querySelector("[id='project-op1']");
+                        let teamId = form.querySelector("[id='team-op1']");
+                        let responsible = form.querySelector("[id='responsible-op1']");
+
+                        form.querySelector("[id='parent_task']").value = task.parent || '';
+                        form.querySelector("#parent_task").innerHTML = parentTask;
+
+                        descriptionView.value = taskData.task.description || "";
+                        textView.value = taskData.task.name || "";
+                        deadlineView.value = taskData.task.deadline ? new Date(taskData.task.deadline).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                        startDateView.value = taskData.task.planned_start_date ? new Date(taskData.task.planned_start_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                        endDateView.value = taskData.task.planned_final_date ? new Date(taskData.task.planned_final_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                        projectId.value = taskData.task.project_id
+                        teamId.value = taskData.task.team_id
+                        responsible.value = taskData.executor[0].user_id
+
+                        let stagesArr = taskData.stages;
+                        let stagesInputs = Array.from(form.querySelectorAll('.check_list_text'));
+                        for (let i = 0; i < stagesInputs.length; i++) {
+                            stagesInputs[i].value = stagesArr[i].description || '';
+                        }
+                        let stagesContainer = form.querySelector("#stages-container");
+                        stagesContainer.innerHTML = "";
+                        for (let i = 0; i < stagesArr.length; i++) {
+                            let stageInput = document.createElement("div");
+                            stageInput.classList.add("check_list_elements");
+                            stageInput.innerHTML = `
+<input type="checkbox" ${stagesArr[i].is_ready ? "checked" : ""} />
+<p class='check_list_text2'>${stagesArr[i].description}</p>
+`;
+                            stagesContainer.appendChild(stageInput);
+                        }
+
+                        form.style.display = "flex";
+
+                        //name="create_task"
+                        form.querySelector('.main_view_list').scrollTop = 0;
+                        form.querySelector('button[type="closemodal1"]').onclick = cancel;
+                        form.querySelector("[name='create_task']").onclick = function () {
+                            taskId = id;
+                            let displayForm = getForm("display_task");
+                            displayForm.style.display = "none";
+                            let parentTaskId = gantt.getSelectedId();
+                            gantt.createTask(this.createTask, parentTaskId);
+                        }
+                        form.querySelector("[name='edit']").onclick = function () {
+                            taskId = id;
+                            let editForm = getForm("edit_task");
+                            let displayForm = getForm("display_task");
+                            displayForm.style.display = "none";
+                            editForm.style.display = "flex";
+                            let task = gantt.getTask(id);
+                            editForm.querySelector('.main_view_list').scrollTop = 0;
+                            editForm.querySelector("[name='text_edit']").value = taskData.task.name || "";
+                            editForm.querySelector("[name='description_edit']").value = taskData.task.description || "";
+                            editForm.querySelector("[id='project-op-edit']").value = taskData.task.project_id
+                            editForm.querySelector("[id='team-op-edit']").value = taskData.task.team_id
+                            editForm.querySelector("[id='responsible-op-edit']").value = taskData.executor[0].user_id
+                            editForm.querySelector("[name='deadline_edit']").value = taskData.task.deadline ? new Date(taskData.task.deadline).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                            editForm.querySelector("[name='start_date_edit']").value = taskData.task.planned_start_date ? new Date(taskData.task.planned_start_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                            editForm.querySelector("[name='end_date_edit']").value = taskData.task.planned_final_date ? new Date(taskData.task.planned_final_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+
+                            let stagesContainerEdit = editForm.querySelector("#stages-container-edit");
+                            const newStagesArr = [...taskData.stages];
+                            function addStage() {
+                                newStagesArr.push({
+                                    is_ready: false,
+                                    description: "",
+                                });
+                                renderStages();
+                            }
+
+                            function renderStages() {
+                                stagesContainerEdit.innerHTML = "";
+                                for (let i = 0; i < newStagesArr.length; i++) {
+                                    let stageInput = document.createElement("div");
+                                    stageInput.classList.add("check_list_elements");
+                                    stageInput.innerHTML = `
+      <input type="checkbox" ${newStagesArr[i].is_ready ? "checked" : ""} />
+      <input type="text" class='check_list_text' value="${newStagesArr[i].description}">
+      <button class="delete-btn">
+        <img src="${deleteButton}" alt="Delete">
+      </button>
+    `;
+                                    stagesContainerEdit.appendChild(stageInput);
+
+                                    // Add event listener to delete button
+                                    const deleteBtn = stageInput.querySelector(".delete-btn");
+                                    deleteBtn.addEventListener("click", () => {
+                                        newStagesArr.splice(i, 1);
+                                        renderStages();
+                                    });
+                                }
+                            }
+                            renderStages();
+                            document.querySelector("#add-stage-btn").addEventListener("click", addStage);
+
+                            let parentTask = "";
+                            if (task.parent) {
+                                parentTask = "Базовая задача: <span style='text-decoration: underline;'>" + gantt.getTask(task.parent).text + "</span>";
+                            } else {
+                                parentTask = "Базовая задача: <span style='text-decoration: underline;'>Отсутствует</span>";
+                            }
+                            editForm.querySelector("[id='parent_task']").value = task.parent || '';
+                            editForm.querySelector("#parent_task").innerHTML = parentTask;
+                            editForm.querySelector("#parent_task").innerHTML = parentTask;
+                            editForm.querySelector('button[type="closemodal3"]').onclick = function () {
+                                gantt.hideLightbox();
+                                editForm.style.display = "none";
+                            };
+                            editForm.querySelector("[name='save_edit']").onclick = edit
+                            editForm.querySelector("[name='create_task_edit']").onclick = function () {
+                                taskId = id;
+                                let editForm = getForm("edit_task");
+                                editForm.style.display = "none";
+                                let parentTaskId = gantt.getSelectedId();
+                                gantt.createTask(this.createTask, parentTaskId);
+                            }
+                            editForm.querySelector("[name='delete_edit']").onclick = remove;
+                        };
+                        form.querySelector("[name='delete']").onclick = remove;
+                    }
+                })
+                .catch(error => {
+                    console.log(error);
+                });
         };
 
         gantt.hideLightbox = function () {
@@ -429,15 +527,45 @@ export default class Gantt extends Component {
         };
 
         // Get запрос задач
-        const instance = axios.create({withCredentials: true});
-        instance.get(`${url}/api/v1/gant/tasks`)
+        axios.get(`http://127.0.0.1:8000/api/v1/gant/tasks`,)
             .then(response => {
                 const transformedData = this.transformData(response.data);
+                console.log(response)
                 gantt.parse(transformedData);
+                gantt.refreshData();
             })
             .catch(error => {
                 console.error(error);
             });
+
+
+        // Получение списка пользователей
+        axios.get(`http://127.0.0.1:8000/api/v1/gant/users`)
+            .then(response => {
+                this.setState({users: response.data});
+            })
+            .catch(error => {
+                console.log(error);
+            });
+
+        // Получение списка проектов
+        axios.get(`http://127.0.0.1:8000/api/v1/gant/projects`)
+            .then(response => {
+                this.setState({projects: response.data});
+            })
+            .catch(error => {
+                console.log(error);
+            });
+
+        // Получение списка команд
+        axios.get(`http://127.0.0.1:8000/api/v1/gant/teams`)
+            .then(response => {
+                this.setState({teams: response.data});
+            })
+            .catch(error => {
+                console.log(error);
+            });
+
 
         gantt.config.drag_move = true;
 
@@ -467,17 +595,17 @@ export default class Gantt extends Component {
                     return;
                 }
             }
-            const instance = axios.create({withCredentials: true});
-            instance.post(`${url}/api/v1/gant/task/${id}/edit_dates`, {
+            axios.post(`http://127.0.0.1:8000/api/v1/gant/task/${id}/edit_dates`, {
                 planned_start_date: new Date(task.start_date).toISOString().slice(0, 10),
-                planned_finish_date: new Date(task.end_date).toISOString().slice(0, 10),
+                planned_final_date: new Date(task.end_date).toISOString().slice(0, 10),
                 deadline: task.deadline
             })
                 .then(response => {
                     console.log(response.data);
+                    gantt.refreshData();
                     toast.success('Дата успешно изменена', {
                         position: "top-right",
-                        autoClose: 5000,
+                        autoClose: 1000,
                         hideProgressBar: false,
                         closeOnClick: true,
                         pauseOnHover: true,
@@ -490,7 +618,7 @@ export default class Gantt extends Component {
                     console.error(error);
                     toast.warn('Дата не изменена', {
                         position: "top-right",
-                        autoClose: 5000,
+                        autoClose: 1000,
                         hideProgressBar: false,
                         closeOnClick: true,
                         pauseOnHover: true,
@@ -501,8 +629,42 @@ export default class Gantt extends Component {
                 });
         });
 
+        gantt.attachEvent("onBeforeGanttRender", function () {
+            let range = gantt.getSubtaskDates();
+            let scaleUnit = gantt.getState().scale_unit;
+            if (range.start_date && range.end_date) {
+                gantt.config.start_date = gantt.calculateEndDate(range.start_date, -10, scaleUnit);
+                gantt.config.end_date = gantt.calculateEndDate(range.end_date, 20, scaleUnit);
+            }
+        });
 
-        function save(id) {
+        gantt.attachEvent("onTaskDrag", function (id, mode, task, original) {
+            let state = gantt.getState();
+            let minDate = state.min_date,
+                maxDate = state.max_date;
+
+            let scaleStep = gantt.date.add(new Date(), state.scale_step, state.scale_unit) - new Date();
+
+            let showDate,
+                repaint = false;
+            if (mode === "resize" || mode === "move") {
+                if (Math.abs(task.start_date - minDate) < scaleStep) {
+                    showDate = task.start_date;
+                    repaint = true;
+
+                } else if (Math.abs(task.end_date - maxDate) < scaleStep) {
+                    showDate = task.end_date;
+                    repaint = true;
+                }
+
+                if (repaint) {
+                    gantt.render();
+                    gantt.showDate(showDate);
+                }
+            }
+        });
+
+        function save() {
             const form = getForm("create_task");
             // Получаем значения полей формы
             const parentId = document.getElementById("parent_task").value;
@@ -511,10 +673,41 @@ export default class Gantt extends Component {
             const deadline = document.getElementsByName("deadline")[0].value;
             const start_date = document.getElementsByName("start_date")[0].value;
             const end_date = document.getElementsByName("end_date")[0].value;
-            // let task = gantt.getTask(id);
             let parentTask = document.getElementById("parent_task").value;
+            let projectId = form.querySelector("[id='project-op']").value;
+            let teamId = form.querySelector("[id='team-op']").value;
+            let responsible = form.querySelector("[id='responsible-op']").value
+
+            let stagesInputs = form.querySelectorAll('.check_list_text');
+            let stagesArr = Array.from(stagesInputs).map(input => ({description: input.value}));
 
             // Валидация полей формы
+            if (!teamId) {
+                toast.error("Выберите команду", {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    progress: undefined,
+                    theme: "light",
+                })
+            }
+
+            if (!responsible) {
+                toast.error("Выберите ответственного", {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    progress: undefined,
+                    theme: "light",
+                })
+            }
+
             if (!text) {
                 toast.error("Введите название задачи", {
                     position: "top-right",
@@ -541,7 +734,6 @@ export default class Gantt extends Component {
                 })
             }
 
-
             if (!start_date || !end_date) {
                 toast.warn("Введите даты начала и конца задачи", {
                     position: "top-right",
@@ -556,7 +748,7 @@ export default class Gantt extends Component {
             }
 
             if (new Date(start_date).getTime() > new Date(end_date).getTime()) {
-                toast.error("Дата начала не может быть позже даты окончания задачи", {
+                toast.warn("Дата начала не может быть позже даты окончания задачи", {
                     position: "top-right",
                     autoClose: 6000,
                     hideProgressBar: false,
@@ -568,29 +760,25 @@ export default class Gantt extends Component {
                 });
             }
 
-
             // Форматируем даты в формат "%Y-%m-%d"
             const formatter = gantt.date.date_to_str("%Y-%m-%d");
             const start_date_formatted = formatter(new Date(start_date));
             const end_date_formatted = formatter(new Date(end_date));
 
             // Отправляем POST запрос на сервер для создания новой задачи
-            const instance = axios.create({withCredentials: true});
-            instance.post(`${url}/api/v1/gant/task/create`, {
+            axios.post(`http://127.0.0.1:8000/api/v1/gant/task/create`, {
                 task: {
                     parent_id: parentId ? parentId : null,
-                    project_id: 1,
-                    team_id: 1,
+                    project_id: projectId ? projectId : null,
+                    team_id: teamId,
                     name: text,
                     description: description,
-                    deadline: deadline ? formatter(new Date(deadline)) : formatter(new Date()),
+                    deadline: deadline ? formatter(new Date(deadline)) : formatter(new Date(end_date_formatted)),
                     planned_start_date: start_date_formatted,
-                    planned_finish_date: end_date_formatted,
+                    planned_final_date: end_date_formatted,
+                    executor_id: responsible,
                 },
-                stages: [
-                    {description: "string"},
-                    {description: "string"}
-                ]
+                stages: stagesArr
             }).then(response => {
                 form.style.display = "none";
                 console.log(response.data);
@@ -606,7 +794,7 @@ export default class Gantt extends Component {
                 });
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 800);
             }).catch(error => {
                 console.error(error);
                 toast.warning("Задача не создана", {
@@ -633,31 +821,38 @@ export default class Gantt extends Component {
             const deadline = document.getElementsByName("deadline_edit")[0].value;
             const start_date = document.getElementsByName("start_date_edit")[0].value;
             const end_date = document.getElementsByName("end_date_edit")[0].value;
-
-            // Валидация полей формы
+            const projectId = form.querySelector("[id='project-op-edit']").value;
+            const teamId = form.querySelector("[id='team-op-edit']").value;
 
             // Форматируем даты в формат "%Y-%m-%d"
             const formatter = gantt.date.date_to_str("%Y-%m-%d");
             const start_date_formatted = formatter(new Date(start_date));
             const end_date_formatted = formatter(new Date(end_date));
 
+
+            // Собираем информацию о стадиях задачи
+            const stagesContainerEdit = form.querySelector("#stages-container-edit");
+            const stageInputs = stagesContainerEdit.querySelectorAll(".check_list_elements");
+            const updatedStages = Array.from(stageInputs).map((input) => {
+                const checkbox = input.querySelector("input[type='checkbox']");
+                const textInput = input.querySelector("input[type='text']");
+                return { description: textInput.value, is_ready: checkbox.checked };
+            });
+
+
             // Отправляем POST запрос на сервер для создания новой задачи
-            const instance = axios.create({withCredentials: true});
-            instance.post(`${url}/api/v1/gant/task/${task.id}/edit`, {
+            axios.post(`http://127.0.0.1:8000/api/v1/gant/task/${task.id}/edit`, {
                 task: {
                     parent_id: parentId ? parentId : null,
-                    project_id: 1,
-                    team_id: 1,
+                    project_id: projectId,
+                    team_id: teamId,
                     name: text,
                     description: description,
                     deadline: deadline ? formatter(new Date(deadline)) : formatter(new Date()),
                     planned_start_date: start_date_formatted,
-                    planned_finish_date: end_date_formatted,
+                    planned_final_date: end_date_formatted,
                 },
-                stages: [
-                    {description: "string"},
-                    {description: "string"}
-                ]
+                stages: updatedStages,
             }).then(response => {
                 gantt.updateTask(taskId);
                 form.style.display = "none";
@@ -674,7 +869,7 @@ export default class Gantt extends Component {
                 });
                 setTimeout(() => {
                     window.location.reload();
-                }, 1200);
+                }, 800);
             }).catch(error => {
                 console.error(error);
                 toast.warning("Задача не Редактирована", {
@@ -698,30 +893,45 @@ export default class Gantt extends Component {
             gantt.hideLightbox();
         }
 
-        function remove() {
-            let task = gantt.getTask(taskId)
-            const instance = axios.create({withCredentials: true});
-            instance.delete(`${url}/api/v1/gant/task/${task.id}/del`)
+        function cascadeDeleteTask(taskId) {
+            const childTasks = gantt.getChildren(taskId);
+            childTasks.forEach(childTask => {
+                cascadeDeleteTask(childTask);
+            });
+            axios.delete(`http://127.0.0.1:8000/api/v1/gant/task/${taskId}/del`)
                 .then(response => {
                     console.log(response.data);
-                    toast.success("Задача удалена", {
-                        position: "top-right",
-                        autoClose: 1200,
-                        hideProgressBar: false,
-                        closeOnClick: true,
-                        pauseOnHover: true,
-                        draggable: true,
-                        progress: undefined,
-                        theme: "light",
-                    });
                 })
                 .catch(error => {
                     console.error(error);
                 });
             gantt.deleteTask(taskId);
-            gantt.hideLightbox();
         }
+
+        function remove() {
+            const task = gantt.getTask(taskId);
+            cascadeDeleteTask(task.id);
+            gantt.hideLightbox();
+            window.location.reload()
+        }
+
+        const divs = this.state.usersLocal.map((performer, index) => ({
+            selectedUserId: performer.id,
+            handleSelectChange: (e) => this.handleSelectChange(e, index)
+        }));
+        this.setState({ divs });
+
+        gantt.render();
     }
+
+    handleSelectChange = (event, index) => {
+        const { value } = event.target;
+        this.setState(prevState => {
+            const divs = [...prevState.divs];
+            divs[index].selectedUserId = value;
+            return { divs };
+        });
+    };
 
     transformData(data) {
         const taskMap = new Map();
@@ -729,22 +939,35 @@ export default class Gantt extends Component {
         function transformTask(task, parentId = 0) {
             const taskId = task.id;
 
+            const startDate = new Date(task.planned_start_date);
+            startDate.setHours(23, 59, 0);
+
+            const endDate = new Date(task.planned_final_date);
+            endDate.setHours(23, 59, 0);
+
             taskMap.set(taskId, {
                 id: taskId,
                 text: task.name,
                 description: task.description,
                 is_on_kanban: task.is_on_kanban,
                 is_completed: task.is_completed,
-                start_date: task.planned_start_date,
-                end_date: task.planned_finish_date,
+                start_date: startDate,
+                end_date: endDate,
                 deadline: task.deadline,
                 open: true,
                 parent: parentId,
-                children: task.children.length
+                children: task.children.length,
+                project_id: task.project_id,
+                team_id: null,
+                executor_id: null,
+                user_id: null,
+                stages: [],
+                executor: []
             });
 
             if (task.children) {
                 task.children.forEach((child) => {
+                    // Рекурсивно вызываем функцию transformTask для каждого дочернего элемента
                     transformTask(child, taskId);
                 });
             }
@@ -759,7 +982,56 @@ export default class Gantt extends Component {
         };
 
         return transformedData;
-    };
+    }
+
+
+    handleProjectChange = (projectId) => {
+        this.setState({
+            selectedProjectIdFilter: projectId
+        });
+
+        console.log(projectId);
+        setTimeout(() => {
+
+            axios.get(`http://127.0.0.1:8000/api/v1/gant/tasks`, {
+                params: {
+                    project_id: this.state.selectedProjectIdFilter
+                }
+            }).then(response => {
+                const updatedTasks = {};
+                const transformedData = this.transformData(response.data);
+
+                // Обойти все задачи и обновить/удалить соответствующие элементы
+                transformedData.data.forEach((task) => {
+                    const existingTask = gantt.getTask(task.id);
+                    if (existingTask) {
+                        // Задача уже существует, обновляем ее данные
+                        gantt.updateTask(task.id, task);
+                        updatedTasks[task.id] = true;
+                    } else {
+                        // Задачи не существует, добавляем ее
+                        gantt.addTask(task);
+                        updatedTasks[task.id] = true;
+                    }
+                });
+
+                // Удалить все задачи, которых нет в updatedTasks
+                gantt.eachTask((task) => {
+                    if (!updatedTasks[task.id]) {
+                        gantt.deleteTask(task.id);
+                    }
+                });
+
+                // Перерисовать gantt
+                gantt.render();
+            })
+                .catch(error => {
+                    console.error(error);
+                });
+        }, 1000);
+    }
+
+
 
     render() {
         const {isRunning, elapsedTime} = this.state;
@@ -770,8 +1042,12 @@ export default class Gantt extends Component {
                         <select name="tasks" id="tasks">
                             <option>Мои Задачи</option>
                         </select>
-                        <select name="projects" id="projects">
-                            <option>Проект</option>
+                        <select name="projects" id="projects"
+                                onChange={(event) => this.handleProjectChange(event.target.value)}>
+                            <option value="">Проект</option>
+                            {this.state.projects.map(project => (
+                                <option key={project.id} value={project.id}>{project.title}</option>
+                            ))}
                         </select>
                         <select name="teams" id="teams">
                             <option>Команда</option>
@@ -797,9 +1073,9 @@ export default class Gantt extends Component {
                             <div className='main_view_list'>
                                 <div className="project">
                                     <span>Проект</span>
-                                    <select>
-                                        {this.state.options.map(option => (
-                                            <option key={option.id} value={option.id}>{option.name}</option>
+                                    <select id='project-op'>
+                                        {this.state.projects.map(option => (
+                                            <option key={option.id} value={option.id}>{option.title}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -810,10 +1086,10 @@ export default class Gantt extends Component {
                                     </div>
                                     <div className="element">
                                         <span>Тег команды</span>
-                                        <select>
-                                            <option>#Тег_команды</option>
-                                            <option>#Гант</option>
-                                            <option>#Канбан</option>
+                                        <select id='team-op'>
+                                            {this.state.teams.map(option => (
+                                                <option key={option.id} value={option.id}>{option.title}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div className="date">
@@ -832,17 +1108,18 @@ export default class Gantt extends Component {
                                 <div className="name">
                                     <div className='nameList'>
                                         <span>Постановщик</span>
-                                        <input type="text" placeholder='ФИО' readOnly={true}/>
+                                        <select id='user-op'>
+                                            {this.state.usersLocal.map(option => (
+                                                <option key={option.id} value={option.id}>{option.first_name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className='nameList'>
                                         <span>Ответственный</span>
-                                        <select>
-                                            <option>Выберите</option>
-                                            <option>Игорь</option>
-                                            <option>Саша</option>
-                                            <option>Вера</option>
-                                            <option>Юля</option>
-                                            <option>Артем</option>
+                                        <select id='responsible-op'>
+                                            {this.state.users.map(option => (
+                                                <option key={option.id} value={option.id}>{option.first_name}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
@@ -851,10 +1128,12 @@ export default class Gantt extends Component {
                                         <span>Исполнители</span>
                                         <button onClick={this.handleAdd}><Add/></button>
                                     </div>
-                                    {this.state.data.map((performer, index) => (
-                                        <div>
-                                            <select key={index}>
-                                                <option>{performer}</option>
+                                    {this.state.divs.map((div, index) => (
+                                        <div key={index}>
+                                            <select value={div.selectedUserId} onChange={div.handleSelectChange}>
+                                                {this.state.usersLocal.map((user) => (
+                                                    <option key={user.id} value={user.id}>{user.first_name}</option>
+                                                ))}
                                             </select>
                                             <button onClick={() => this.handleDelete(index)}><Del/></button>
                                         </div>
@@ -866,8 +1145,8 @@ export default class Gantt extends Component {
                                         <button onClick={this.addItem}><Add/></button>
                                     </div>
                                     <div className='list'>
-                                        {this.state.items.map((item, index) => (
-                                            <div className='check_list_elements' key={index}>
+                                        {this.state.stagesID.map((item, index) => (
+                                            <div className='check_list_elements' key={index} id={`item-${index}`}>
                                                 <input type="checkbox"/>
                                                 <input type="text"
                                                        className='check_list_text'
@@ -907,9 +1186,9 @@ export default class Gantt extends Component {
                             <div className='main_view_list'>
                                 <div className="project">
                                     <span>Проект</span>
-                                    <select disabled>
-                                        {this.state.options.map(option => (
-                                            <option key={option.id} value={option.id}>{option.name}</option>
+                                    <select id='project-op1' disabled>
+                                        {this.state.projects.map(option => (
+                                            <option key={option.id} value={option.id}>{option.title}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -920,10 +1199,10 @@ export default class Gantt extends Component {
                                     </div>
                                     <div className="element">
                                         <span>Тег команды</span>
-                                        <select disabled>
-                                            <option>#Тег_команды</option>
-                                            <option>#Гант</option>
-                                            <option>#Канбан</option>
+                                        <select id='team-op1' disabled>
+                                            {this.state.teams.map(option => (
+                                                <option key={option.id} value={option.id}>{option.title}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div className="date">
@@ -937,24 +1216,36 @@ export default class Gantt extends Component {
                                 </div>
                                 <div className="description">
                                     <p><textarea name="description1"
-                                                 placeholder='Описание задачи' readOnly={true}></textarea>
+                                                 placeholder='Описание задачи' readOnly={true} disabled></textarea>
                                     </p>
                                 </div>
                                 <div className="name">
                                     <div className='nameList'>
                                         <span>Постановщик</span>
-                                        <input type="text" placeholder='ФИО' readOnly={true}/>
+                                        <select id='user-op1' disabled>
+                                            {this.state.usersLocal.map(option => (
+                                                <option key={option.id} value={option.id}>{option.first_name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className='nameList'>
                                         <span>Ответственный</span>
-                                        <input type="text" placeholder='ФИО' readOnly={true}/>
+                                        <select id='responsible-op1' disabled>
+                                            {this.state.users.map(option => (
+                                                <option key={option.id} value={option.id}>{option.first_name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                                 <div className='performers'>
                                     <span>Исполнители</span>
-                                    {this.state.data.map((performer, index) => (
+                                    {this.state.divs.map((div, index) => (
                                         <div key={index}>
-                                            <input type="text" value={performer} readOnly={true}/>
+                                            <select disabled value={div.selectedUserId} onChange={div.handleSelectChange}>
+                                                {this.state.usersLocal.map((user) => (
+                                                    <option key={user.id} value={user.id}>{user.first_name}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     ))}
                                 </div>
@@ -962,14 +1253,7 @@ export default class Gantt extends Component {
                                     <div className='check_list_title'>
                                         <span>Чек-лист</span>
                                     </div>
-                                    <div className='list_view'>
-                                        {this.state.items.map((item, index) => (
-                                            <div className='check_list_elements' key={index}>
-                                                <input type="checkbox"/>
-                                                <p className='check_list_text2'>{item}</p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <div className='list_view' id="stages-container"></div>
                                 </div>
                                 <div className='timer'>
                                     <div className='timer_top'>
@@ -1009,6 +1293,7 @@ export default class Gantt extends Component {
                                         <form onSubmit={this.handleSubmit}>
                                             <input type="text" placeholder="Введите комментарий..."
                                                    value={this.state.currentComment} onChange={this.handleChange}/>
+                                            <button type="submit">Добавить</button>
                                         </form>
                                     </div>
                                     <div className="comments_output">
@@ -1046,9 +1331,9 @@ export default class Gantt extends Component {
                             <div className='main_view_list'>
                                 <div className="project">
                                     <span>Проект</span>
-                                    <select>
-                                        {this.state.options.map(option => (
-                                            <option key={option.id} value={option.id}>{option.name}</option>
+                                    <select id='project-op-edit'>
+                                        {this.state.projects.map(option => (
+                                            <option key={option.id} value={option.id}>{option.title}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -1059,10 +1344,10 @@ export default class Gantt extends Component {
                                     </div>
                                     <div className="element">
                                         <span>Тег команды</span>
-                                        <select>
-                                            <option>#Тег_команды</option>
-                                            <option>#Гант</option>
-                                            <option>#Канбан</option>
+                                        <select id='team-op-edit'>
+                                            {this.state.teams.map(option => (
+                                                <option key={option.id} value={option.id}>{option.title}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div className="date">
@@ -1082,17 +1367,18 @@ export default class Gantt extends Component {
                                 <div className="name">
                                     <div className='nameList'>
                                         <span>Постановщик</span>
-                                        <input type="text" placeholder='Введите Имя'/>
+                                        <select id='user-op-edit'>
+                                            {this.state.usersLocal.map(option => (
+                                                <option key={option.id} value={option.id}>{option.first_name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className='nameList'>
                                         <span>Ответственный</span>
-                                        <select>
-                                            <option>Выберите</option>
-                                            <option>Игорь</option>
-                                            <option>Саша</option>
-                                            <option>Вера</option>
-                                            <option>Юля</option>
-                                            <option>Артем</option>
+                                        <select id='responsible-op-edit' disabled>
+                                            {this.state.users.map(option => (
+                                                <option key={option.id} value={option.id}>{option.first_name}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
@@ -1101,10 +1387,12 @@ export default class Gantt extends Component {
                                         <span>Исполнители</span>
                                         <button onClick={this.handleAdd}><Add/></button>
                                     </div>
-                                    {this.state.data.map((performer, index) => (
+                                    {this.state.divs.map((div, index) => (
                                         <div key={index}>
-                                            <select>
-                                                <option>{performer}</option>
+                                            <select value={div.selectedUserId} onChange={div.handleSelectChange}>
+                                                {this.state.usersLocal.map((user) => (
+                                                    <option key={user.id} value={user.id}>{user.first_name}</option>
+                                                ))}
                                             </select>
                                             <button onClick={() => this.handleDelete(index)}><Del/></button>
                                         </div>
@@ -1113,21 +1401,9 @@ export default class Gantt extends Component {
                                 <div className='check_list_edit'>
                                     <div className='check_list_title'>
                                         <span>Чек-лист</span>
-                                        <button onClick={this.addItem}><Add/></button>
+                                        <button id="add-stage-btn"><Add/></button>
                                     </div>
-                                    <div className='list'>
-                                        {this.state.items.map((item, index) => (
-                                            <div className='check_list_elements' key={index}>
-                                                <input type="checkbox"/>
-                                                <input type="text"
-                                                       className='check_list_text'
-                                                       value={item}
-                                                       onChange={(event) => this.handleItemChange(event, index)}
-                                                />
-                                                <button onClick={() => this.removeItem(index)}><Del/></button>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <div className='list_view' id="stages-container-edit"></div>
                                     <div className='timer_bottom'>
                                         <span>Затраченное время</span>
                                         <div className='timer_bottom_elements'>
@@ -1163,7 +1439,7 @@ export default class Gantt extends Component {
                     ref={(input) => {
                         this.ganttContainer = input
                     }}
-                    style={{width: '90%', height: '85%', overflow: 'auto' }}
+                    style={{width: '90%', height: '85%', overflow: 'auto'}}
                 ></div>
             </>
         );

@@ -15,8 +15,6 @@ DEBUG = int(os.getenv('DEBUG', True))
 
 ALLOWED_HOSTS = ['*']
 
-# CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS').split()
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -40,6 +38,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
+
+
 CSRF_COOKIE_SECURE = False
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -71,10 +71,18 @@ DATABASES = {
     "default": {
         "ENGINE": os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
         "NAME": os.environ.get("SQL_DATABASE", BASE_DIR / "db.sqlite3"),
-        "USER": os.environ.get("SQL_USER", "user"),
-        "PASSWORD": os.environ.get("SQL_PASSWORD", "password"),
-        "HOST": os.environ.get("SQL_HOST", "localhost"),
-        "PORT": os.environ.get("SQL_PORT", "5432"),
+        "USER": os.environ.get("SQL_USER", None),
+        "PASSWORD": os.environ.get("SQL_PASSWORD", None),
+        "HOST": os.environ.get("SQL_HOST", None),
+        "PORT": os.environ.get("SQL_PORT", None),
+    },
+    "ocenka": {
+        "ENGINE": os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": os.environ.get("SQL_OCENKA_DATABASE", BASE_DIR / "ocenka.sqlite3"),
+        "USER": os.environ.get("SQL_USER", None),
+        "PASSWORD": os.environ.get("SQL_PASSWORD", None),
+        "HOST": os.environ.get("SQL_HOST", None),
+        "PORT": os.environ.get("SQL_PORT", None),
     }
 }
 
@@ -97,6 +105,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 REST_SESSION_LOGIN = False
+
 REST_FRAMEWORK = {
    'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
