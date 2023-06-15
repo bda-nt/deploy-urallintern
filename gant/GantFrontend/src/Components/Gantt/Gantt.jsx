@@ -264,7 +264,7 @@ export default class Gantt extends Component {
         gantt.showLightbox = function (id) {
             taskId = id;
             let task = gantt.getTask(id)
-            let taskUrl = "http://127.0.0.1:8000/api/v1/gant/task/" + taskId;
+            let taskUrl = `${url}/api/v1/gant/task/` + taskId;
 
             let form;
             let $new = task.$new;
