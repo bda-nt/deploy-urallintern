@@ -195,7 +195,7 @@ class TaskController extends Controller
      */
     public function update(TaskUpdateRequest $request)
     {
-        $inputArr = $request->valid;
+        $inputArr = $request->toArray();
         unset($inputArr["taskId"]);
 
         $stages = false;
