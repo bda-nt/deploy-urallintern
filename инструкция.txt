@@ -6,12 +6,11 @@ sudo systemctl enable docker
 sudo systemctl start docker
 
 sudo apt-get install unzip
-cd new/deploy-urallintern
 
 git clone https://github.com/bda-nt/deploy-urallintern
 git config --global credential.helper store
 
-unzip vendor.zip -d vendor
+unzip vendor.zip -d .
 
 добавить внутренний ip адрес в .env файлы у gant и ocenka 
 DJANGO_ALLOWED_HOSTS=158.160.52.159 *
@@ -19,8 +18,8 @@ ALLOWED_HOSTS=158.160.52.159 *
 
 1. cd kaban
 перекинуть папку vendor
-chmod a+x ./vendor/bin/sail
-sudo chmod a+x /home/login/new/deploy-urallintern/kaban/vendor/laravel/sail/bin/sail
+sudo chmod a+x ./vendor/bin/sail
+sudo chmod a+x ./vendor/laravel/sail/bin/sail
 sudo chmod -R 777 ./storage
 Менять в docker-compose.yml у front-gant в урл адресе на новый белый ip
 2. sudo ./vendor/bin/sail up -d 
