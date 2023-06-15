@@ -171,8 +171,16 @@ class TaskController extends Controller
                     'comments.content', "comments.created_at",
                 ]);
 
+            $parent_name = null;
+            if ($task->parent_id !== null) {
+                $parent_name = Task::select([
+                    "name"
+                ])->find($task->parent_id)->name;
+            }
+
             $task->stages = $stages;
             $task->comments = $comments;
+            $task->parent_name = $parent_name;
         }
 
         return $task;
@@ -187,14 +195,21 @@ class TaskController extends Controller
      */
     public function update(TaskUpdateRequest $request)
     {
-        //$inputArr = $request->valid;
-        $inputArr = $request->toArray();
+        $inputArr = $request->valid;
         unset($inputArr["taskId"]);
+
         $stages = false;
         if (array_key_exists("stages", $inputArr)) {
             $stages = $inputArr["stages"];
             unset($inputArr["stages"]);
         }
+
+        $responsible_time_spent = false;
+        if (array_key_exists("responsible_time_spent", $inputArr)) {
+            $responsible_time_spent = $inputArr["responsible_time_spent"];
+            unset($inputArr["responsible_time_spent"]);
+        }
+
         if (sizeof($inputArr) !== 0) {
             if ($request->status_id === 5) { // статус = Выполнено
                 $inputArr["completed_at"] = now();
@@ -202,6 +217,12 @@ class TaskController extends Controller
             }
             Task::where('id', '=', $request->taskId)
                 ->update($inputArr);
+        }
+
+        if ($responsible_time_spent !== false) {
+            Executors::where('task_id', '=', $request->taskId)
+                //->where('user_id', '=', $request->responsible_id)
+                ->update(['time_spent' => $responsible_time_spent]);
         }
 
         if ($stages !== false) {
