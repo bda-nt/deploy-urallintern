@@ -4,6 +4,7 @@ sudo apt install docker docker.io
 sudo apt install docker-compose
 sudo systemctl enable docker
 sudo systemctl start docker
+// лучше поставить оптимизированный образ виртуалки
 
 sudo apt-get install unzip
 
