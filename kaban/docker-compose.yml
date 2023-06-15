@@ -53,6 +53,10 @@ services:
     front-kanban:
         build:
             context: ./front-kanban
+            args:
+                - KANBAN_API_URI=http://158.160.52.118:3000/api
+                - GANT_API_URI=http://158.160.52.118:8000/api
+                - GRADE_API_URI=http://158.160.52.118:5000
         ports:
             - "83:80"
         networks:
