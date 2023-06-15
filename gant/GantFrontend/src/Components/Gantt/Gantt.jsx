@@ -18,7 +18,7 @@ import {onKanbanViewChange} from './onKanban';
 
 window.onKanbanViewChange = onKanbanViewChange;
 let taskId = null;
-
+const url = process.env.REACT_APP_API_URL;
 export default class Gantt extends Component {
     constructor(props) {
         super(props);
@@ -527,7 +527,7 @@ export default class Gantt extends Component {
         };
 
         // Get запрос задач
-        axios.get(`http://127.0.0.1:8000/api/v1/gant/tasks`,)
+        axios.get(`${url}/api/v1/gant/tasks`,)
             .then(response => {
                 const transformedData = this.transformData(response.data);
                 console.log(response)
@@ -540,7 +540,7 @@ export default class Gantt extends Component {
 
 
         // Получение списка пользователей
-        axios.get(`http://127.0.0.1:8000/api/v1/gant/users`)
+        axios.get(`${url}/api/v1/gant/users`)
             .then(response => {
                 this.setState({users: response.data});
             })
@@ -549,7 +549,7 @@ export default class Gantt extends Component {
             });
 
         // Получение списка проектов
-        axios.get(`http://127.0.0.1:8000/api/v1/gant/projects`)
+        axios.get(`${url}/api/v1/gant/projects`)
             .then(response => {
                 this.setState({projects: response.data});
             })
@@ -558,7 +558,7 @@ export default class Gantt extends Component {
             });
 
         // Получение списка команд
-        axios.get(`http://127.0.0.1:8000/api/v1/gant/teams`)
+        axios.get(`${url}/api/v1/gant/teams`)
             .then(response => {
                 this.setState({teams: response.data});
             })
@@ -595,7 +595,7 @@ export default class Gantt extends Component {
                     return;
                 }
             }
-            axios.post(`http://127.0.0.1:8000/api/v1/gant/task/${id}/edit_dates`, {
+            axios.post(`${url}/api/v1/gant/task/${id}/edit_dates`, {
                 planned_start_date: new Date(task.start_date).toISOString().slice(0, 10),
                 planned_final_date: new Date(task.end_date).toISOString().slice(0, 10),
                 deadline: task.deadline
@@ -766,7 +766,7 @@ export default class Gantt extends Component {
             const end_date_formatted = formatter(new Date(end_date));
 
             // Отправляем POST запрос на сервер для создания новой задачи
-            axios.post(`http://127.0.0.1:8000/api/v1/gant/task/create`, {
+            axios.post(`${url}/api/v1/gant/task/create`, {
                 task: {
                     parent_id: parentId ? parentId : null,
                     project_id: projectId ? projectId : null,
@@ -841,7 +841,7 @@ export default class Gantt extends Component {
 
 
             // Отправляем POST запрос на сервер для создания новой задачи
-            axios.post(`http://127.0.0.1:8000/api/v1/gant/task/${task.id}/edit`, {
+            axios.post(`${url}/api/v1/gant/task/${task.id}/edit`, {
                 task: {
                     parent_id: parentId ? parentId : null,
                     project_id: projectId,
@@ -898,7 +898,7 @@ export default class Gantt extends Component {
             childTasks.forEach(childTask => {
                 cascadeDeleteTask(childTask);
             });
-            axios.delete(`http://127.0.0.1:8000/api/v1/gant/task/${taskId}/del`)
+            axios.delete(`${url}/api/v1/gant/task/${taskId}/del`)
                 .then(response => {
                     console.log(response.data);
                 })
@@ -993,7 +993,7 @@ export default class Gantt extends Component {
         console.log(projectId);
         setTimeout(() => {
 
-            axios.get(`http://127.0.0.1:8000/api/v1/gant/tasks`, {
+            axios.get(`${url}/api/v1/gant/tasks`, {
                 params: {
                     project_id: this.state.selectedProjectIdFilter
                 }
