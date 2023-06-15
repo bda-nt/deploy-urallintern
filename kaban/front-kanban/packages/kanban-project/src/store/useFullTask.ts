@@ -1,5 +1,6 @@
 import { TaskFull } from "@kanban/data/TaskFull";
-import { kanbanApi, kanbanApiContainer } from "./Api";
+import { kanbanApi } from "./Api";
+import { TimeOnly } from "@kanban/utils/TimeOnly";
 
 
 export const useFullTask = () =>
@@ -17,15 +18,11 @@ export const useFullTask = () =>
           begin: new Date(data.plannedDates.begin),
           end: new Date(data.plannedDates.end),
         },
-        parentTask: {
-          ...data.parentTask,
-          deadline: new Date(data.parentTask?.deadline)
-        },
         comments: data.comments.map(comment => ({
           ...comment,
           time: new Date(comment.time!),
         })),
-        wastedTime: new Date(data.wastedTime),
+        wastedTime: new TimeOnly(data.wastedTime),
       } as TaskFull
     }
     ] as const

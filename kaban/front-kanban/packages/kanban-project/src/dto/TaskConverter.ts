@@ -3,6 +3,8 @@ import { TaskFullSerializable } from "@kanban/data/TaskFullSerializable";
 import { TaskShortSerializable } from "@kanban/data/TaskShortSerializable";
 import { SqlDateConverter } from "@kanban/utils/converters/SqlDateConverter";
 import { TaskFullDto } from "./TaskFullDto";
+import { TimeOnly } from "@kanban/utils/TimeOnly";
+import { CommentaryConverter } from "./CommentaryConverter";
 
 export class TaskConverter
 {
@@ -24,14 +26,12 @@ export class TaskConverter
       },
       checkList: dto.stages.map(s => ({ id: s.id, isCompleted: !!s.is_ready, title: s.description })),
       contractors: [],
-      deadline: SqlDateConverter.toJs(dto.deadline).getMilliseconds(),
+      deadline: SqlDateConverter.toJs(dto.deadline).getTime(),
       description: dto.description,
-      parentTask: {
-        id: dto.parent_id
-      } as unknown as TaskShortSerializable,
+      parentTask: dto.parent_id ? {id: dto.parent_id, title: dto.parent_name!} : undefined,
       plannedDates: {
-        begin: SqlDateConverter.toJs(dto.planned_start_date).getMilliseconds(),
-        end: SqlDateConverter.toJs(dto.planned_final_date).getMilliseconds(),
+        begin: SqlDateConverter.toJs(dto.planned_start_date).getTime(),
+        end: SqlDateConverter.toJs(dto.planned_final_date).getTime(),
       },
       project: {
         id: dto.project_id,
@@ -46,19 +46,9 @@ export class TaskConverter
         name: dto.status_name
       },
       title: dto.task_name,
-      wastedTime: SqlDateConverter.toJs(dto.responsible_time_spent).getMilliseconds(),
+      wastedTime: TimeOnly.parseFromString(dto.responsible_time_spent).toSeconds(),
       isOnKanban: !!dto.is_on_kanban,
-      comments: dto.comments.map(comment => ({
-        author: {
-          id: comment.author_id,
-          name: comment.author_first_name,
-          surname: comment.author_last_name,
-          patronymic: comment.author_patronymic,
-        },
-        content: comment.content,
-        id: comment.id!,
-        time: comment.created_at ? SqlDateConverter.toJs(comment.created_at).getMilliseconds() : undefined, // позже напишу selector или hook
-      })),
+      comments: dto.comments.map(c => CommentaryConverter.dtoToSerializable(c)),
     }
   }
 
@@ -78,7 +68,7 @@ export class TaskConverter
       responsible_first_name: task.responsible.name,
       responsible_last_name: task.responsible.surname,
       responsible_patronymic: task.responsible.patronymic,
-      responsible_time_spent: SqlDateConverter.toSql(task.wastedTime),
+      responsible_time_spent: task.wastedTime.toString(),
       team_id: task.tag?.id,
       team_tag: task.tag?.tag,
       planned_start_date: SqlDateConverter.toSql(task.plannedDates.begin),
@@ -99,14 +89,7 @@ export class TaskConverter
           is_ready: stage.isCompleted ? 1 : 0,
         }
       }),
-      comments: task.comments?.map(comment => ({
-        id: comment.id,
-        content: comment.content,
-        author_id:  comment.author.id,
-        author_first_name: comment.author.name,
-        author_last_name: comment.author.surname,
-        author_patronymic: comment.author.patronymic,
-      })),
+      comments: task.comments?.map(comment => CommentaryConverter.toDto(comment)),
     }
   }
 }

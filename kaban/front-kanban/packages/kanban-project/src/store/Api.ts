@@ -1,10 +1,14 @@
+import { DefaultAppEnv } from './../../../root-project/src/AppEnv/DefaultAppEnv';
+import { Commentary } from "@kanban/data/Commentary";
+import { CommentarySerializable } from "@kanban/data/CommentarySerializable";
 import { Person } from "@kanban/data/Person";
 import { Project } from "@kanban/data/Project";
-import { Status } from "@kanban/data/Status";
 import { Tag } from "@kanban/data/Tag";
 import { TaskFull } from "@kanban/data/TaskFull";
 import { TaskFullSerializable } from '@kanban/data/TaskFullSerializable';
 import { TaskShortSerializable } from "@kanban/data/TaskShortSerializable";
+import { CommentaryConverter } from "@kanban/dto/CommentaryConverter";
+import { CommentaryDto } from "@kanban/dto/CommentaryDto";
 import { ProjectGetResponse } from "@kanban/dto/ProjectGetResponse";
 import { TagDto } from "@kanban/dto/TagDto";
 import { TaskConverter } from "@kanban/dto/TaskConverter";
@@ -13,124 +17,17 @@ import { TaskPutResponse } from "@kanban/dto/TaskPutResponse";
 import { TaskShortGetResponse } from "@kanban/dto/TaskShortGetResponse";
 import { UserDto } from "@kanban/dto/UserDto";
 import { SqlDateConverter } from "@kanban/utils/converters/SqlDateConverter";
-import { QueryReturnValue } from "@reduxjs/toolkit/dist/query/baseQueryTypes";
+import { nameof } from "@kanban/utils/converters/nameof";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 
-const buildKanbanApiMock = () => createApi(
-  {
-    baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:8050" }),
-    tagTypes: ["tasks"],
-    endpoints: (builder) =>
-    {
-      return {
-        getShortTasksSerializable: builder.query<TaskShortSerializable[], void>({
-          query: () => "/tasks",
-          providesTags: ["tasks"],
-        }),
-        getFullTaskSerializable: builder.query<TaskFullSerializable, number>({
-          query: (taskId: number) => `tasks/${taskId}`,
-        }),
-        patchTaskStatus: builder.mutation<TaskPutResponse, { taskId: number, newStatusId: number }>({
-          queryFn: (arg, api, options, baseFetch) =>
-          {
-            const resposne = baseFetch(`/tasks/${arg.taskId}`) as Promise<QueryReturnValue<TaskFull>>
-            const result = resposne.then((task) =>
-            {
-              const statusResponse = baseFetch(`/statuses/${arg.newStatusId}`) as Promise<QueryReturnValue<Status>>
-              return statusResponse.then(status => ({
-                task: task.data,
-                status: status.data,
-              }))
-            }).then(data =>
-            {
-              return baseFetch({
-                url: `tasks/${arg.taskId}`,
-                method: "Put",
-                body: {
-                  ...(data.task),
-                  status: data.status,
-                }
-              })
-            }).then(() => ({
-              data: {
-                message: "successful"
-              }
-            }));
-            
-            return result;
-          },
-          invalidatesTags: ["tasks"]
-        }),
-        putFullTask: builder.mutation<TaskPutResponse, TaskFull>({
-          query: () => ({
-            url: "/tasks",
-            method: "Put",
-          }),
-          invalidatesTags: ["tasks"]
-        }),
-        removeTaskFromKanban: builder.mutation<TaskPutResponse, number>({
-          query: (taskId) => ({
-            url: `/tasks/${taskId}`,
-            method: "Put",
-            body: {
-              is_on_kanban: 0,
-            }
-          }),
-          invalidatesTags: ["tasks"]
-        }),
-        getProjects: builder.query<Project[], void>({
-          query: () => "/projects",
-        }),
-        getCurrentUser: builder.query<Person, void>({
-          query: () => "user/current",
-        }),
-        getTags: builder.query<Tag[], void>({
-          query: () => "/teams"
-        }),
-        getUsers: builder.query<Person[], void>({
-          query: () => "/users"
-        }),
-        addFullTask: builder.mutation<TaskFullSerializable, TaskFull>({
-          //@ts-ignore
-          queryFn: (args) => ({
-            data: {
-              ...args,
-              deadline: args.deadline?.getMilliseconds(),
-              plannedDates: {
-                begin: args.deadline?.getMilliseconds(),
-                end: args.deadline?.getMilliseconds(),
-              },
-              wastedTime: args.wastedTime?.getMilliseconds(),
-            }
-          })
-        }),
-        removeTask: builder.mutation<TaskPutResponse, number>({
-          query: (args) => ({
-            url: `tasks/${args}`,
-            method: "Delete",
-          }),
-          invalidatesTags: ["tasks"],
-          transformResponse: () => ({ message: "successful" })
-        })
-      }
-    },
-    reducerPath: "kanbanApi"
-  }
-);
+const baseUrl = DefaultAppEnv.kanbanApiUri;
 
-
-
-
-
-
-
-const baseUrl = import.meta.env.VITE_KANBAN_API_URI;
 
 const buildKanbanApiRemote = () => createApi(
   {
     baseQuery: fetchBaseQuery({ baseUrl }),
-    tagTypes: ["tasks"],
+    tagTypes: ["tasks", "openTask"],
     endpoints: (builder) =>
     {
       return {
@@ -153,7 +50,7 @@ const buildKanbanApiRemote = () => createApi(
                 patronymic: dto.responsible_patronymic
               },
               contractors: [],
-              deadline: SqlDateConverter.toJs(dto.deadline).getMilliseconds(),
+              deadline: SqlDateConverter.toJs(dto.deadline).getTime(),
               id: dto.task_id,
               project: {
                 id: dto.project_id,
@@ -173,6 +70,7 @@ const buildKanbanApiRemote = () => createApi(
         }),
         getFullTaskSerializable: builder.query<TaskFullSerializable, number>({
           query: (taskId: number) => `tasks/${taskId}`,
+          providesTags: ["openTask"],
           transformResponse: (dto: TaskFullDto) =>
           {
             return new TaskConverter().fullDtoToSerilizable(dto);
@@ -191,9 +89,25 @@ const buildKanbanApiRemote = () => createApi(
         }),
         putFullTask: builder.mutation<TaskPutResponse, TaskFull>({
           query: (task: TaskFull) => ({
-            url: "/tasks",
+            url: `/tasks/${task.id}`,
             method: "Put",
-            body: new TaskConverter().fullModelToDto(task),
+            body: function(){
+              const dto = new TaskConverter().fullModelToDto(task);
+              const kostil: any = {
+                ...dto,
+              }
+
+              delete kostil["project_name"];
+              delete kostil["status_name"];
+              delete kostil["responsible_id"];
+              delete kostil["responsible_first_name"];
+              delete kostil["responsible_last_name"];
+              delete kostil["responsible_patronymic"];
+              delete kostil["team_tag"];
+              delete kostil["comments"];
+
+              return kostil; //удалить после правок на сервере
+            }(),
           }),
           invalidatesTags: ["tasks"]
         }),
@@ -201,7 +115,13 @@ const buildKanbanApiRemote = () => createApi(
           query: (task: TaskFull) => ({
             url: "/tasks",
             method: "Post",
-            body: new TaskConverter().fullModelToDto(task),
+            body: function(){
+              const dto =  new TaskConverter().fullModelToDto(task);
+              return {
+                ...dto,
+                [nameof<TaskFullDto>("stages")]: dto.stages.map(s => s.description)
+              }
+            }(),
           }),
           invalidatesTags: ["tasks"],
         }),
@@ -258,16 +178,24 @@ const buildKanbanApiRemote = () => createApi(
             }))
           }
         }),
+        addCommentary: builder.mutation<CommentarySerializable, Commentary>({
+          query: (args) => ({
+            url: "/comments",
+            method: "Post",
+            body: CommentaryConverter.toDto(args),
+          }),
+          invalidatesTags: ["openTask"],
+          transformResponse: (dto: CommentaryDto) => {
+            return CommentaryConverter.dtoToSerializable(dto);
+          }
+        }),
       }
     },
     reducerPath: "kanbanApi"
   }
 );
 
-//can't map typeof Dto to model
-//@ts-ignore 
-export const kanbanApi: ReturnType<typeof buildKanbanApiRemote>
-  = import.meta.env.VITE_KANBAN_MOCK_API === "true" ? buildKanbanApiMock() : buildKanbanApiRemote();
+export const kanbanApi = buildKanbanApiRemote();
 
 
 const {
@@ -279,6 +207,9 @@ const {
   useGetTagsQuery,
   useGetUsersQuery,
   useAddFullTaskMutation,
+  useAddCommentaryMutation,
+  useRemoveTaskMutation,
+  usePutFullTaskMutation
 } = kanbanApi;
 
 export const kanbanApiContainer = {
@@ -290,4 +221,7 @@ export const kanbanApiContainer = {
   useGetTagsQuery,
   useGetUsersQuery,
   useAddFullTaskMutation,
+  useAddCommentaryMutation,
+  useRemoveTaskMutation,
+  usePutFullTaskMutation,
 }

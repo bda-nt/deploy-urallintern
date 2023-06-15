@@ -8,6 +8,7 @@ import { TaskCreate } from "./components/TaskCreate/TaskCreate";
 import { TaskEdit } from "./components/TaskEdit/TaskEdit";
 import { TaskLoader } from "./components/TaskLoader/TaskLoader";
 import { TaskView } from "./components/TaskView/TaskView";
+import { Commentary } from "./data/Commentary";
 import { BaseStatuses } from "./data/Status";
 import { TaskFull } from "./data/TaskFull";
 import { TaskShort } from "./data/TaskShort";
@@ -31,7 +32,10 @@ export const KanbanPage = () =>
 {
     const tasks = useFilteredShortTasks().data!;
     const [removeTaskFromKanban] = kanbanApiContainer.useRemoveTaskFromKanbanMutation();
+    const [putTask] = kanbanApiContainer.usePutFullTaskMutation();
     const [addTask] = kanbanApiContainer.useAddFullTaskMutation();
+    const [addCommentary] = kanbanApiContainer.useAddCommentaryMutation();
+    const [eraseTask] = kanbanApiContainer.useRemoveTaskMutation();
     const [patchStatus] = kanbanApiContainer.usePatchTaskStatusMutation();
     const [getFullTask, fullTaskResponse] = useFullTask();
     const taskViewRef = useRef<HTMLDivElement | null>(null);
@@ -49,7 +53,6 @@ export const KanbanPage = () =>
     }
 
     const handleTaskAdd = (fullTask: TaskFull) => {
-        console.log(fullTask);
         addTask(fullTask);
     }
 
@@ -59,6 +62,18 @@ export const KanbanPage = () =>
         {
             removeTaskFromKanban(task.id!);
         }
+    }
+
+    const handleAddCommentary = (commentary: Commentary) => {
+        addCommentary(commentary);
+    }
+
+    const handleRemoveTaskFromKanban = (taskId: number) => {
+        removeTaskFromKanban(taskId);
+    }
+
+    const handleRemoveTask = (taskId: number) => {
+        eraseTask(taskId);
     }
 
     function renderModal()
@@ -74,15 +89,20 @@ export const KanbanPage = () =>
                         ref={taskViewRef}
                         task={fullTask}
                         onClose={() => setStage(null)}
+                        onAddCommentary={handleAddCommentary}
+                        onRemoveFromKanban={() => handleRemoveTaskFromKanban(fullTask.id)}
+                        onRemove={() => handleRemoveTask(fullTask.id)}
                     />
                 </CSSTransition>
                 <CSSTransition timeout={300} in={stage === "edit" && canRender} unmountOnExit mountOnEnter>
                     <TaskEdit
-                        onChange={() => { }}
-                        onSave={() => { }}
+                        onSave={(task) => putTask(task)}
+                        onRemove={() => handleRemoveTask(fullTask.id)}
                         ref={taskViewRef}
                         task={fullTask}
                         onClose={() => setStage(null)}
+                        onRemoveFromKanban={() => handleRemoveTaskFromKanban(fullTask.id)}
+                        onAddCommentary={handleAddCommentary}
                     />
                 </CSSTransition>
                 <CSSTransition timeout={300} in={stage === "create"} unmountOnExit mountOnEnter>
